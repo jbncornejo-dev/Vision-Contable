@@ -1,0 +1,24 @@
+# =========================
+# 1. Backend (Python/FastAPI)
+# =========================
+backend/venv/
+backend/env/
+backend/__pycache__/
+backend/.pytest_cache/
+*.pyc
+
+# =========================
+# 2. Inteligencia Artificial (Datasets y Modelos)
+# =========================
+*.keras
+*.h5
+*.pb
+/dataset/
+/imagenes/
+
+# =========================
+# 3. Sistema Operativo y Varios
+# =========================
+.DS_Store
+Thumbs.db
+.env
