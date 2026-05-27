@@ -42,7 +42,20 @@ Enfoque de Inteligencia Artificial
 Endpoints de la API
 
 - GET /health: Verifica el estado del servicio backend.
+
 - POST /predict: Recibe un archivo de imagen (multipart/form-data) y ejecuta el pipeline. Retorna un objeto JSON con el estado de aprobación, clases predichas y niveles de confianza de cada modelo. Incluye integración con Swagger UI en la ruta /docs para pruebas interactivas.
+
+- GET / * Descripción: Ruta raíz del servicio. Retorna un mensaje de bienvenida, la versión actual de la API, el estado de disponibilidad del sistema y enlaces rápidos a la documentación.
+
+- GET /health * Descripción: Endpoint de verificación de estado (Health Check). Utilizado por herramientas de monitoreo o el frontend para validar que el contenedor o servidor esté activo, confirmando además el backend de ejecución activo (TensorFlow/Keras).
+
+- GET /models/info * Descripción: Metadatos de los modelos de IA. Retorna un objeto JSON detallado con las especificaciones técnicas de las tres redes neuronales convolucionales (CNN) cargadas globalmente en memoria RAM: dimensiones de entrada de los tensores (224x224x3), mapeo inverso de los índices de las clases estructurales y de orientación, y versiones de los archivos .keras utilizados.
+
+- POST /predict * Descripción: Endpoint principal del pipeline de inferencia. Recibe un archivo binario de imagen (multipart/form-data). Realiza de forma secuencial la validación de nitidez, la corrección matricial de la orientación (rotación física si la imagen está invertida o de lado) y la clasificación del tipo de documento contable. Retorna las etiquetas asignadas junto con sus métricas probabilísticas de confianza.
+
+- POST /preprocess/normalize * Descripción: Endpoint modular de procesamiento visual. Diseñado para desacoplar la lógica de IA. Recibe una imagen y ejecuta únicamente la normalización dimensional y el enderezamiento espacial basado en el segundo modelo, retornando la imagen corregida directamente en formato de archivo (image/jpeg) en lugar de datos JSON. Es ideal para depuración en el frontend.
+
+- GET /analytics/stats * Descripción: Panel de métricas e indicadores. Proporciona datos estadísticos acumulados del uso del sistema (útil para la defensa académica del proyecto), tales como la tasa de rechazo por calidad insuficiente, el volumen de documentos procesados por categoría (Facturas, NITs, Declaraciones Juradas) y latencias promedio en el cálculo de tensores.
 
 Stack Tecnológico
 
