@@ -1,16 +1,35 @@
-"use client";
+﻿"use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { UploadCloud, File, CheckCircle2, Loader2, Folder, ChevronRight, ChevronDown } from "lucide-react";
 import Link from "next/link";
+
+type ResultadoDocumento = {
+    tipo_documento?: string;
+    confianza_documento?: number;
+    [key: string]: unknown;
+};
+
+type ResultadoLoteItem = {
+    archivo_url?: string;
+    resultado?: ResultadoDocumento;
+    error?: string;
+};
 
 type DocItem = {
     id: string;
     name: string;
-    tempPath?: string;
+    blobUrl?: string;
     status: "en_cola" | "procesando" | "procesado" | "error";
-    result?: any;
+    result?: ResultadoDocumento;
     error?: string;
+};
+
+type UploadApiResponse = {
+    url?: string;
+    downloadUrl?: string;
+    error?: string;
+    detail?: string;
 };
 
 export default function Dashboard() {
@@ -24,8 +43,10 @@ export default function Dashboard() {
         NITs: false,
         No_Reconocidos: false,
     });
+
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000";
-    const fetchFolderCounts = async () => {
+
+    const fetchFolderCounts = useCallback(async () => {
         try {
             const response = await fetch(`${backendUrl}/documentos`);
             if (!response.ok) return;
@@ -38,17 +59,17 @@ export default function Dashboard() {
         } catch {
             setFolderCounts({});
         }
-    };
+    }, [backendUrl]);
 
     useEffect(() => {
-        fetchFolderCounts();
-    }, []);
+        const timer = setTimeout(() => {
+            void fetchFolderCounts();
+        }, 0);
+        return () => clearTimeout(timer);
+    }, [fetchFolderCounts]);
 
-
-    // Referencia para abrir el selector de archivos oculto
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Función que se ejecuta cuando el usuario selecciona un archivo real
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(event.target.files || []);
         if (files.length === 0) return;
@@ -56,30 +77,47 @@ export default function Dashboard() {
         setIsUploading(true);
 
         try {
-            const form = new FormData();
-            files.forEach((file) => form.append("files", file));
+            const nuevos: DocItem[] = [];
 
-            const response = await fetch(`${backendUrl}/uploads`, {
-                method: "POST",
-                body: form,
-            });
+            for (const file of files) {
+                try {
+                    const response = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
+                        method: "POST",
+                        body: file,
+                    });
 
-            if (!response.ok) {
-                throw new Error(`Error ${response.status} al subir archivos`);
+                    const payload: UploadApiResponse = await response.json();
+                    const resolvedUrl = payload.url || payload.downloadUrl;
+
+                    if (!response.ok || !resolvedUrl) {
+                        const errorMessage = [payload.error, payload.detail].filter(Boolean).join(": ") || `Error ${response.status} al subir`;
+                        nuevos.push({
+                            id: Math.random().toString(36).slice(2, 10),
+                            name: file.name,
+                            status: "error",
+                            error: errorMessage,
+                        });
+                        continue;
+                    }
+
+                    nuevos.push({
+                        id: Math.random().toString(36).slice(2, 10),
+                        name: file.name,
+                        blobUrl: resolvedUrl,
+                        status: "en_cola",
+                    });
+                } catch (error) {
+                    console.error(`Error al subir ${file.name}:`, error);
+                    nuevos.push({
+                        id: Math.random().toString(36).slice(2, 10),
+                        name: file.name,
+                        status: "error",
+                        error: "Error de red al subir",
+                    });
+                }
             }
 
-            const payload = await response.json();
-            const nuevos: DocItem[] = (payload.archivos || []).map((item: any) => ({
-                id: Math.random().toString(36).slice(2, 10),
-                name: item.nombre_original,
-                tempPath: item.archivo_temporal,
-                status: "en_cola",
-            }));
-
             setDocuments((prev) => [...nuevos, ...prev]);
-        } catch (error) {
-            console.error("Error al subir archivos:", error);
-            setDocuments((prev) => prev.map((doc) => ({ ...doc, status: "error", error: "Error al subir" })));
         } finally {
             setIsUploading(false);
             if (fileInputRef.current) {
@@ -93,8 +131,14 @@ export default function Dashboard() {
         setDocuments((prev) => prev.map((doc) => (doc.status === "en_cola" ? { ...doc, status: "procesando" } : doc)));
 
         try {
+            const archivos = documents
+                .filter((doc) => doc.status === "en_cola" && doc.blobUrl)
+                .map((doc) => ({ nombre_original: doc.name, url_blob: doc.blobUrl }));
+
             const response = await fetch(`${backendUrl}/uploads/procesar`, {
                 method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ archivos }),
             });
 
             if (!response.ok) {
@@ -102,11 +146,11 @@ export default function Dashboard() {
             }
 
             const payload = await response.json();
-            const resultados = payload.resultados || [];
+            const resultados: ResultadoLoteItem[] = payload.resultados || [];
 
             setDocuments((prev) =>
                 prev.map((doc) => {
-                    const match = resultados.find((r: any) => r.archivo_temporal === doc.tempPath);
+                    const match = resultados.find((r) => r.archivo_url === doc.blobUrl);
                     if (!match) return doc;
                     if (match.error) {
                         return { ...doc, status: "error", error: match.error };
@@ -151,8 +195,6 @@ export default function Dashboard() {
 
     return (
         <div className="min-h-screen bg-white text-[#021024] flex font-dm-sans overflow-hidden">
-
-            {/* ================= SIDEBAR ================= */}
             <aside className="w-64 border-r border-[#5483B3]/20 bg-[#021024] flex flex-col hidden md:flex">
                 <div className="h-16 flex items-center px-6 border-b border-[#5483B3]/10">
                     <span className="font-unbounded font-bold text-sm text-white">Visión Contable</span>
@@ -205,13 +247,9 @@ export default function Dashboard() {
                 <div className="p-4 border-t border-[#5483B3]/10" />
             </aside>
 
-            {/* ================= ÁREA PRINCIPAL ================= */}
             <main className="flex-1 flex flex-col relative h-screen overflow-y-auto bg-white">
-
                 <header className="h-16 border-b border-gray-100 flex items-center justify-between px-8 z-10 bg-white">
-                    <h1 className="font-unbounded font-bold text-lg text-[#021024]">
-                        Clasificación de documentos
-                    </h1>
+                    <h1 className="font-unbounded font-bold text-lg text-[#021024]">Clasificación de documentos</h1>
                     <Link href="/">
                         <button className="text-sm border border-[#021024] px-4 py-2 text-[#021024] hover:bg-[#021024] hover:text-white transition-colors duration-200">
                             Volver al inicio
@@ -220,8 +258,6 @@ export default function Dashboard() {
                 </header>
 
                 <div className="p-8 max-w-5xl mx-auto w-full z-10 flex-1 flex flex-col">
-
-                    {/* ================= DROPZONE CON INPUT REAL ================= */}
                     <div className="mb-10">
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="font-semibold text-[#021024]">Subir archivos</h2>
@@ -248,7 +284,6 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        {/* Input oculto que recibe el archivo */}
                         <input
                             type="file"
                             ref={fileInputRef}
@@ -261,8 +296,8 @@ export default function Dashboard() {
                         <div
                             onClick={() => fileInputRef.current?.click()}
                             className={`w-full h-56 border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all ${isUploading
-                                    ? "border-[#052659] bg-[#C1E8FF]/10"
-                                    : "border-[#5483B3]/40 bg-[#C1E8FF]/5 hover:bg-[#C1E8FF]/10 hover:border-[#052659]"
+                                ? "border-[#052659] bg-[#C1E8FF]/10"
+                                : "border-[#5483B3]/40 bg-[#C1E8FF]/5 hover:bg-[#C1E8FF]/10 hover:border-[#052659]"
                                 }`}
                         >
                             {isUploading ? (
@@ -280,7 +315,6 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    {/* ================= HISTORIAL DE PROCESAMIENTO ================= */}
                     <div className="flex-1">
                         <h2 className="font-semibold text-[#021024] mb-4">Documentos en proceso</h2>
 
@@ -294,14 +328,14 @@ export default function Dashboard() {
                                 {documents.map((doc) => (
                                     <div key={doc.id} className="flex items-center justify-between border border-gray-100 bg-white p-4 hover:border-[#5483B3]/40 hover:shadow-[2px_2px_0px_0px_rgba(5,38,89,0.05)] transition-all">
                                         <div className="flex items-center gap-4">
-                                            <div className={`w-10 h-10 flex items-center justify-center ${doc.status === "procesado" ? 'bg-[#052659] text-white' : 'bg-[#C1E8FF]/20 text-[#052659]'}`}>
+                                            <div className={`w-10 h-10 flex items-center justify-center ${doc.status === "procesado" ? "bg-[#052659] text-white" : "bg-[#C1E8FF]/20 text-[#052659]"}`}>
                                                 <File size={18} />
                                             </div>
                                             <div>
                                                 <div className="text-sm font-semibold text-[#021024]">{doc.name}</div>
                                                 {doc.result?.tipo_documento && (
                                                     <div className="text-xs text-gray-500 mt-0.5">
-                                                        {doc.result.tipo_documento} · Confianza: {(doc.result.confianza_documento * 100).toFixed(0)}%
+                                                        {doc.result.tipo_documento} · Confianza: {((doc.result.confianza_documento ?? 0) * 100).toFixed(0)}%
                                                     </div>
                                                 )}
                                             </div>
@@ -337,7 +371,6 @@ export default function Dashboard() {
                         )}
                     </div>
 
-                    {/* ================= CARPETAS VISUALES DE SESION ================= */}
                     <div className="mt-10">
                         <h2 className="font-semibold text-[#021024] mb-4">Carpetas de sesión</h2>
                         <div className="grid md:grid-cols-2 gap-4 items-start">
@@ -369,9 +402,7 @@ export default function Dashboard() {
                                                     <ChevronRight size={16} className="text-gray-400" />
                                                 )}
                                                 <Folder size={18} className="text-[#052659]" />
-                                                <span className="text-[#021024] text-sm font-semibold">
-                                                    {item.label}
-                                                </span>
+                                                <span className="text-[#021024] text-sm font-semibold">{item.label}</span>
                                             </div>
                                             <span className="text-gray-500 text-sm font-semibold">{count}</span>
                                         </button>
@@ -395,8 +426,8 @@ export default function Dashboard() {
                                                             Descargar ZIP
                                                         </span>
                                                     ) : (
-                                                        <a 
-                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-[#052659] text-[#052659] hover:bg-[#052659] hover:text-white transition-colors" 
+                                                        <a
+                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-[#052659] text-[#052659] hover:bg-[#052659] hover:text-white transition-colors"
                                                             href={href}
                                                         >
                                                             Descargar ZIP
@@ -410,7 +441,6 @@ export default function Dashboard() {
                             })}
                         </div>
                     </div>
-
                 </div>
             </main>
         </div>

@@ -18,7 +18,6 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={`${plusJakarta.variable} ${dmSans.variable} font-dm-sans antialiased bg-[#ffffff] text-[#021024]`}>
-        {/* Fondo */}
         <div className="fixed inset-0 z-[-1] pointer-events-none"
           style={{
             backgroundImage: `linear-gradient(to right, rgba(84, 131, 179, 0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(84, 131, 179, 0.1) 1px, transparent 1px)`,

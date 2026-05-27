@@ -6,16 +6,12 @@ import Link from "next/link";
 export default function Hero() {
     return (
         <section className="relative pt-32 md:pt-40 pb-20 px-6 max-w-7xl mx-auto min-h-[90vh] flex flex-col items-center justify-center">
-            {/* Background Decorations */}
             <div className="absolute inset-0 pointer-events-none -z-10 overflow-hidden">
                 <div className="absolute top-20 right-0 w-[500px] h-[500px] bg-[#C1E8FF]/20 rounded-full blur-[100px]" />
                 <div className="absolute bottom-0 left-20 w-[400px] h-[400px] bg-[#5483B3]/10 rounded-full blur-[100px]" />
             </div>
 
-            {/* Text content - centered */}
             <div className="space-y-8 z-10 w-full max-w-3xl text-center">
-
-                {/* Main Heading */}
                 <motion.h1
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -31,7 +27,6 @@ export default function Hero() {
                     tus finanzas
                 </motion.h1>
 
-                {/* Subtitle */}
                 <motion.p
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -41,7 +36,6 @@ export default function Hero() {
                     Ordena facturas, NITs y declaraciones juradas con un flujo simple y resultados claros. Menos tiempo manual, más control.
                 </motion.p>
 
-                {/* Buttons */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}

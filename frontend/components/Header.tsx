@@ -7,7 +7,6 @@ export default function Header() {
     return (
         <nav className="fixed top-0 w-full border-b border-[#5483B3]/20 bg-white/70 backdrop-blur-md z-50 transition-all duration-500 hover:bg-white/80 hover:shadow-[0_10px_40px_-10px_rgba(5,38,89,0.1)]">
             <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-                {/* Logo Section */}
                 <div className="flex items-center gap-3 font-share-tech text-xl text-[#021024] tracking-tight group cursor-pointer">
                     <div className="relative flex items-center justify-center">
                         <Image 
@@ -25,7 +24,6 @@ export default function Header() {
                     </span>
                 </div>
 
-                {/* Navigation Links & Buttons */}
                 <div className="flex items-center gap-6 font-dm-sans text-sm tracking-wide">
                     <button className="hidden md:flex items-center gap-1 text-[#5483B3] hover:text-[#052659] transition-all duration-300 group relative py-2">
                         <span className="relative z-10">// DOCS</span>

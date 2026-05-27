@@ -12,7 +12,6 @@ export default function Footer() {
                     Entra al entorno de pruebas, sube documentos reales y revisa los resultados en segundos.
                 </p>
 
-                {/* ESTE BOTÓN NOS LLEVA AL DASHBOARD */}
                 <Link href="/dashboard">
                     <button className="bg-[#7DA0CA] text-[#021024] font-dm-sans text-lg px-10 py-5 rounded-sm hover:bg-white transition-all flex items-center justify-center gap-3 shadow-[0_0_20px_rgba(125,160,202,0.3)] hover:-translate-y-1">
                         IR AL DASHBOARD <ChevronRight size={20} />

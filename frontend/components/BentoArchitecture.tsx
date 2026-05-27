@@ -16,7 +16,6 @@ export default function BentoArchitecture() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* 1. Control de Calidad */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
@@ -48,7 +47,6 @@ export default function BentoArchitecture() {
                     </div>
                 </motion.div>
 
-                {/* 2. Enderezado Automático */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
@@ -69,7 +67,6 @@ export default function BentoArchitecture() {
                     </div>
                 </motion.div>
 
-                {/* 3. Clasificación y Guardado */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
