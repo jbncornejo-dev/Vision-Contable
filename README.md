@@ -36,6 +36,9 @@ cd Vision-Contable
 1. Copia `backend/.env.example` a `backend/.env` y añade tu `OCRSPACE_API_KEY`.
 2. Copia `frontend/.env.local.example` a `frontend/.env.local` y ajusta `BLOB_READ_WRITE_TOKEN` o `NEXT_PUBLIC_BACKEND_URL` (para local es `http://127.0.0.1:8000`).
 
+**Entorno virtual incluido (si está en el repo):**
+Si el repositorio ya trae un entorno virtual dentro de `backend/venv`, puedes activarlo directamente en lugar de crear uno nuevo.
+
 ---
 
 ### Ejecución Local Manual
@@ -51,13 +54,13 @@ Sigue estos pasos secuenciales teniendo instalados **Python (3.10+)** y **Node.j
 2. **Crea y activa un entorno virtual de Python:**
    * En **Windows**:
      ```bash
-     python -m venv venv
-     venv\Scripts\activate
+       python -m venv venv
+       venv\Scripts\activate
      ```
    * En **macOS/Linux**:
      ```bash
-     python3 -m venv venv
-     source venv/bin/activate
+       python3 -m venv venv
+       source venv/bin/activate
      ```
 3. **Instala las dependencias necesarias:**
    ```bash

@@ -1,7 +1,6 @@
 # =========================
 # 1. Backend (Python/FastAPI)
 # =========================
-backend/venv/
 backend/env/
 backend/__pycache__/
 backend/.pytest_cache/
@@ -28,5 +27,4 @@ Thumbs.db
 backend/.env
 !.env.example
 !env.example
-.venv/
 __pycache__/
