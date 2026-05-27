@@ -26,7 +26,14 @@ py -3.12 -m venv .venv
 python -m pip install --upgrade pip setuptools wheel
 python -m pip install -r requirements.txt
 copy .env.example .env
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Si el comando `uvicorn` no se encuentra, usa esta variante directa:
+
+```bash
+cd backend
+.venv\Scripts\python.exe -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 > En macOS/Linux:
