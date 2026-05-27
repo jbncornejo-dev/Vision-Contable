@@ -1,17 +1,25 @@
-import { Terminal, ScanLine, ChevronRight } from "lucide-react";
+import { ScanLine, ChevronRight } from "lucide-react";
+import Image from "next/image";
+import logo from "@/app/logo.svg";
 
 export default function Header() {
     return (
         <nav className="fixed top-0 w-full border-b border-[#5483B3]/20 bg-white/70 backdrop-blur-md z-50 transition-all duration-500 hover:bg-white/80 hover:shadow-[0_10px_40px_-10px_rgba(5,38,89,0.1)]">
             <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
                 {/* Logo Section */}
-                <div className="flex items-center gap-2 font-share-tech text-xl text-[#021024] tracking-tight group cursor-pointer">
-                    <div className="relative">
-                        <Terminal size={20} className="text-[#052659] transition-transform duration-300 group-hover:scale-110 group-hover:text-[#5483B3]" />
-                        <div className="absolute inset-0 bg-[#5483B3] blur-md opacity-0 group-hover:opacity-40 transition-opacity duration-300 rounded-full" />
+                <div className="flex items-center gap-3 font-share-tech text-xl text-[#021024] tracking-tight group cursor-pointer">
+                    <div className="relative flex items-center justify-center">
+                        <Image 
+                            src={logo} 
+                            alt="Visión Contable Logo" 
+                            width={32} 
+                            height={32} 
+                            className="transition-transform duration-300 group-hover:scale-110 drop-shadow-sm"
+                        />
+                        <div className="absolute inset-0 bg-[#5483B3] blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-300 rounded-full" />
                     </div>
                     <span className="font-bold relative flex items-center">
-                        &gt;_ Visión<span className="text-[#052659] transition-colors duration-300 group-hover:text-[#5483B3]">_Contable</span>
+                        Visión<span className="text-[#052659] transition-colors duration-300 group-hover:text-[#5483B3]">_Contable</span>
                         <span className="inline-block w-2 h-4 bg-[#052659] ml-1 opacity-0 group-hover:opacity-100 group-hover:animate-pulse transition-all duration-300" />
                     </span>
                 </div>
