@@ -3,6 +3,7 @@ import json
 import os
 import shutil
 import urllib.parse
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -14,13 +15,7 @@ os.environ["KERAS_BACKEND"] = "tensorflow"
 import keras
 import cv2
 import openpyxl
-
-try:
-    from pyzbar import pyzbar
-    _PYZBAR_OK = True
-except Exception:
-    pyzbar = None
-    _PYZBAR_OK = False
+import requests
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import StreamingResponse, FileResponse
@@ -127,16 +122,34 @@ def preprocess(img: Image.Image) -> np.ndarray:
 
 
 def leer_qr(img: Image.Image) -> dict | None:
-    if not _PYZBAR_OK:
-        return None
-
     img_cv = cv2.cvtColor(np.array(img.convert("RGB")), cv2.COLOR_RGB2BGR)
-    codigos = pyzbar.decode(img_cv)
-    if not codigos:
+    detector = cv2.QRCodeDetector()
+    data, _, _ = detector.detectAndDecode(img_cv)
+    if not data:
         return None
 
-    contenido = codigos[0].data.decode("utf-8")
+    contenido = data.strip()
     resultado = {"contenido_raw": contenido}
+
+    parsed = urllib.parse.urlparse(contenido)
+    es_url = parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+    if es_url:
+        try:
+            resp = requests.get(contenido, timeout=5)
+            content_type = resp.headers.get("Content-Type", "")
+            title_match = re.search(r"<title>(.*?)</title>", resp.text, re.IGNORECASE | re.DOTALL)
+            titulo = title_match.group(1).strip() if title_match else None
+            resultado["fetch"] = {
+                "url": contenido,
+                "status_code": resp.status_code,
+                "content_type": content_type,
+                "title": titulo,
+            }
+        except Exception as exc:
+            resultado["fetch"] = {
+                "url": contenido,
+                "error": str(exc),
+            }
 
     if "impuestos.gob.bo" in contenido:
         try:
@@ -151,6 +164,13 @@ def leer_qr(img: Image.Image) -> dict | None:
             }
         except Exception:
             pass
+    elif "|" in contenido:
+        partes = [p.strip() for p in contenido.split("|")]
+        resultado["fuente"] = "QR simple"
+        resultado["datos_factura"] = {
+            "raw": contenido,
+            "partes": partes,
+        }
 
     return resultado
 
