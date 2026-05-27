@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
-import { Unbounded, Space_Grotesk, Share_Tech_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, DM_Sans } from "next/font/google";
 import "./globals.css";
 
-const unbounded = Unbounded({ subsets: ["latin"], variable: "--font-unbounded" });
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-space-grotesk" });
-const shareTech = Share_Tech_Mono({ weight: ["400"], subsets: ["latin"], variable: "--font-share-tech" });
+const plusJakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-plus-jakarta" });
+const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans" });
 
 export const metadata: Metadata = {
   title: "SaaS Visión Contable | IA",
@@ -18,7 +17,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body className={`${unbounded.variable} ${spaceGrotesk.variable} ${shareTech.variable} font-space-grotesk antialiased bg-[#ffffff] text-[#021024]`}>
+      <body className={`${plusJakarta.variable} ${dmSans.variable} font-dm-sans antialiased bg-[#ffffff] text-[#021024]`}>
         {/* Fondo */}
         <div className="fixed inset-0 z-[-1] pointer-events-none"
           style={{

@@ -109,23 +109,23 @@ export default function CinematicPipeline() {
 
                     <div className="absolute top-28 text-center z-50">
                         <h2 className="font-unbounded font-bold text-3xl md:text-5xl text-white uppercase tracking-tighter">
-                            Motor <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#5483B3] to-[#C1E8FF]">Neuronal</span>
+                            Flujo <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#5483B3] to-[#C1E8FF]">inteligente</span>
                         </h2>
-                        <p className="font-share-tech text-[#7DA0CA] mt-2 tracking-widest text-sm flex items-center justify-center gap-2">
-                            <ScanLine size={14} /> [ SCROLL PARA ANALIZAR TIMELINE ]
+                        <p className="font-dm-sans text-[#7DA0CA] mt-2 tracking-wide text-sm flex items-center justify-center gap-2">
+                            <ScanLine size={14} /> Desliza para ver el recorrido
                         </p>
                     </div>
 
                     {/* ================= SCANNERS ================= */}
                     <div className="scanner-1 absolute top-[28vh] w-full max-w-5xl h-[2px] bg-gradient-to-r from-transparent via-[#ef4444] to-transparent shadow-[0_0_20px_#ef4444] opacity-0 scale-x-0 z-30 flex justify-center">
-                        <span className="absolute -top-6 font-share-tech text-[10px] text-white bg-[#ef4444]/20 border border-[#ef4444]/50 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1">
-                            <Search size={10} /> L1_FILTRO_CALIDAD
+                        <span className="absolute -top-6 font-dm-sans text-xs text-white bg-[#ef4444]/20 border border-[#ef4444]/50 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1">
+                            <Search size={10} /> Revisión de calidad
                         </span>
                     </div>
 
                     <div className="scanner-2 absolute top-[55vh] w-full max-w-5xl h-[2px] bg-gradient-to-r from-transparent via-[#5483B3] to-transparent shadow-[0_0_20px_#5483B3] opacity-0 scale-x-0 z-30 flex justify-center">
-                        <span className="absolute -top-6 font-share-tech text-[10px] text-[#052659] bg-[#C1E8FF]/80 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1 font-bold">
-                            <ShieldCheck size={10} /> L2_AUTO_ORIENTACIÓN
+                        <span className="absolute -top-6 font-dm-sans text-xs text-[#052659] bg-[#C1E8FF]/80 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1 font-bold">
+                            <ShieldCheck size={10} /> Enderezar documento
                         </span>
                     </div>
 
@@ -136,7 +136,7 @@ export default function CinematicPipeline() {
                             <div className="border border-[#5483B3]/40 bg-white/10 backdrop-blur-md p-4 w-20 h-28 md:w-28 md:h-36 flex flex-col items-center justify-center rounded-xl shadow-2xl relative overflow-hidden group">
                                 <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent" />
                                 <FileCode2 size={32} className="text-[#C1E8FF] mb-2" />
-                                <span className="font-share-tech text-xs text-white tracking-wider">NIT</span>
+                                <span className="font-dm-sans text-xs text-white tracking-wide">NIT</span>
                             </div>
                         </div>
 
@@ -144,7 +144,7 @@ export default function CinematicPipeline() {
                         <div className="document-node doc-bad absolute opacity-0 scale-50" style={{ left: "32.5%" }}>
                             <div className="border border-[#ef4444]/40 bg-white/5 backdrop-blur-sm p-4 w-20 h-28 md:w-28 md:h-36 flex flex-col items-center justify-center rounded-xl shadow-lg blur-[2px]">
                                 <FileText size={32} className="text-[#C1E8FF]/50 mb-2" />
-                                <span className="font-share-tech text-xs text-white/50 tracking-wider">FACT</span>
+                                <span className="font-dm-sans text-xs text-white/50 tracking-wide">FACT</span>
                             </div>
                         </div>
 
@@ -152,7 +152,7 @@ export default function CinematicPipeline() {
                         <div className="document-node doc-good doc-contract doc-rotated absolute opacity-0 scale-50" style={{ left: "50%" }}>
                             <div className="border border-[#ef4444]/60 bg-white/10 backdrop-blur-md p-4 w-20 h-28 md:w-28 md:h-36 flex flex-col items-center justify-center rounded-xl shadow-2xl">
                                 <File size={32} className="text-[#ef4444] mb-2" />
-                                <span className="font-share-tech text-xs text-white tracking-wider">CNTR</span>
+                                <span className="font-dm-sans text-xs text-white tracking-wide">CNTR</span>
                             </div>
                         </div>
 
@@ -160,7 +160,7 @@ export default function CinematicPipeline() {
                         <div className="document-node doc-bad absolute opacity-0 scale-50" style={{ left: "67.5%" }}>
                             <div className="border border-[#ef4444]/40 bg-white/5 backdrop-blur-sm p-4 w-20 h-28 md:w-28 md:h-36 flex flex-col items-center justify-center rounded-xl shadow-lg blur-[2px]">
                                 <FileCode2 size={32} className="text-[#C1E8FF]/50 mb-2" />
-                                <span className="font-share-tech text-xs text-white/50 tracking-wider">NIT</span>
+                                <span className="font-dm-sans text-xs text-white/50 tracking-wide">NIT</span>
                             </div>
                         </div>
 
@@ -169,7 +169,7 @@ export default function CinematicPipeline() {
                             <div className="border border-[#5483B3]/40 bg-white/10 backdrop-blur-md p-4 w-20 h-28 md:w-28 md:h-36 flex flex-col items-center justify-center rounded-xl shadow-2xl relative overflow-hidden">
                                 <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent" />
                                 <FileText size={32} className="text-[#C1E8FF] mb-2" />
-                                <span className="font-share-tech text-xs text-white tracking-wider">FACT</span>
+                                <span className="font-dm-sans text-xs text-white tracking-wide">FACT</span>
                             </div>
                         </div>
                     </div>
@@ -178,19 +178,19 @@ export default function CinematicPipeline() {
                     <div className="folders-ui absolute top-[85vh] w-full max-w-5xl mx-auto opacity-0 z-10 h-32">
                         {/* Carpeta NITs */}
                         <div className="folder-glow absolute bottom-0 flex flex-col items-center justify-end w-28 h-20 md:w-36 md:h-24 border border-[#5483B3]/30 bg-[#021024]/80 backdrop-blur-xl rounded-t-2xl shadow-xl pb-3" style={{ left: "20%" }}>
-                            <div className="absolute -top-3 font-share-tech text-[10px] md:text-xs bg-[#5483B3] text-white px-3 py-1 rounded-sm shadow-md tracking-widest font-bold">/NITS</div>
+                            <div className="absolute -top-3 font-dm-sans text-xs bg-[#5483B3] text-white px-3 py-1 rounded-sm shadow-md tracking-wide font-bold">/NITS</div>
                             <FileCode2 size={24} className="text-[#7DA0CA] opacity-50" />
                         </div>
 
                         {/* Carpeta CONTRATOS */}
                         <div className="folder-glow absolute bottom-0 flex flex-col items-center justify-end w-28 h-20 md:w-36 md:h-24 border border-[#5483B3]/30 bg-[#021024]/80 backdrop-blur-xl rounded-t-2xl shadow-xl pb-3" style={{ left: "50%" }}>
-                            <div className="absolute -top-3 font-share-tech text-[10px] md:text-xs bg-[#5483B3] text-white px-3 py-1 rounded-sm shadow-md tracking-widest font-bold">/CNTR</div>
+                            <div className="absolute -top-3 font-dm-sans text-xs bg-[#5483B3] text-white px-3 py-1 rounded-sm shadow-md tracking-wide font-bold">/CNTR</div>
                             <File size={24} className="text-[#7DA0CA] opacity-50" />
                         </div>
 
                         {/* Carpeta FACTURAS */}
                         <div className="folder-glow absolute bottom-0 flex flex-col items-center justify-end w-28 h-20 md:w-36 md:h-24 border border-[#5483B3]/30 bg-[#021024]/80 backdrop-blur-xl rounded-t-2xl shadow-xl pb-3" style={{ left: "80%" }}>
-                            <div className="absolute -top-3 font-share-tech text-[10px] md:text-xs bg-[#5483B3] text-white px-3 py-1 rounded-sm shadow-md tracking-widest font-bold">/FACT</div>
+                            <div className="absolute -top-3 font-dm-sans text-xs bg-[#5483B3] text-white px-3 py-1 rounded-sm shadow-md tracking-wide font-bold">/FACT</div>
                             <FileText size={24} className="text-[#7DA0CA] opacity-50" />
                         </div>
                     </div>

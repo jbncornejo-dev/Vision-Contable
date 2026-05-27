@@ -1,5 +1,6 @@
 import { ScanLine, ChevronRight } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import logo from "@/app/logo.svg";
 
 export default function Header() {
@@ -25,17 +26,17 @@ export default function Header() {
                 </div>
 
                 {/* Navigation Links & Buttons */}
-                <div className="flex items-center gap-6 font-share-tech text-sm tracking-widest">
+                <div className="flex items-center gap-6 font-dm-sans text-sm tracking-wide">
                     <button className="hidden md:flex items-center gap-1 text-[#5483B3] hover:text-[#052659] transition-all duration-300 group relative py-2">
                         <span className="relative z-10">// DOCS</span>
                         <ChevronRight size={14} className="opacity-0 -ml-3 transition-all duration-300 group-hover:opacity-100 group-hover:ml-0 text-[#052659]" />
                         <span className="absolute bottom-1 left-0 w-0 h-[1px] bg-[#052659] transition-all duration-300 group-hover:w-full" />
                     </button>
 
-                    <button className="group px-5 py-2 md:px-6 md:py-2.5 bg-transparent border border-[#021024] text-[#021024] hover:bg-[#021024] hover:text-white transition-all duration-300 rounded-sm flex items-center gap-3 relative shadow-sm hover:shadow-[4px_4px_0px_0px_rgba(84,131,179,0.2)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none">
-                        <span className="hidden md:inline font-medium tracking-widest">INICIAR SESIÓN</span>
+                    <Link href="/dashboard" className="group px-5 py-2 md:px-6 md:py-2.5 bg-transparent border border-[#021024] text-[#021024] hover:bg-[#021024] hover:text-white transition-all duration-300 rounded-sm flex items-center gap-3 relative shadow-sm hover:shadow-[4px_4px_0px_0px_rgba(84,131,179,0.2)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none">
+                        <span className="hidden md:inline font-medium tracking-wide">IR AL DASHBOARD</span>
                         <ScanLine size={16} className="transition-all duration-300 group-hover:rotate-12 group-hover:scale-110" />
-                    </button>
+                    </Link>
                 </div>
             </div>
         </nav>
