@@ -17,6 +17,8 @@ import keras
 import cv2
 import openpyxl
 import requests
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import StreamingResponse, FileResponse
@@ -25,6 +27,8 @@ from fastapi.middleware.cors import CORSMiddleware
 MODELOS_DIR = os.getenv("MODELOS_DIR", "./Modelos_Exportados")
 ARCHIVOS_DIR = Path(os.getenv("ARCHIVOS_DIR", "./Documentos_Clasificados"))
 TEMP_DIR = Path(os.getenv("TEMP_DIR", "./Documentos_Temporales"))
+RESULTADOS_DIR = Path(os.getenv("RESULTADOS_DIR", "./Documentos_Resultados"))
+OCRSPACE_API_KEY = os.getenv("OCRSPACE_API_KEY", "").strip()
 
 IMG_SIZE = (224, 224)
 
@@ -99,6 +103,7 @@ def init_storage():
     for carpeta in carpetas:
         (ARCHIVOS_DIR / carpeta).mkdir(parents=True, exist_ok=True)
     TEMP_DIR.mkdir(parents=True, exist_ok=True)
+    RESULTADOS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @app.on_event("startup")
@@ -176,6 +181,64 @@ def leer_qr(img: Image.Image) -> dict | None:
         }
 
     return resultado
+
+
+def ocr_space_image(img: Image.Image) -> dict:
+    if not OCRSPACE_API_KEY:
+        return {"error": "OCRSPACE_API_KEY no configurada"}
+
+    buffer = io.BytesIO()
+    img.save(buffer, format="PNG")
+    buffer.seek(0)
+
+    try:
+        resp = requests.post(
+            "https://api.ocr.space/parse/image",
+            files={"file": ("documento.png", buffer, "image/png")},
+            data={"language": "spa", "OCREngine": 2},
+            headers={"apikey": OCRSPACE_API_KEY},
+            timeout=20,
+        )
+        data = resp.json()
+    except Exception as exc:
+        return {"error": str(exc)}
+
+    if not data or data.get("IsErroredOnProcessing"):
+        return {"error": data.get("ErrorMessage") or data.get("ErrorDetails") or "OCR error"}
+
+    parsed = data.get("ParsedResults") or []
+    texto = "\n".join(p.get("ParsedText", "") for p in parsed).strip()
+    return {"texto": texto}
+
+
+def extraer_campos_ocr(texto: str, tipo: str) -> dict:
+    resultado = {}
+
+    nit_match = re.search(r"\b\d{7,13}\b", texto)
+    if nit_match:
+        resultado["nit"] = nit_match.group(0)
+
+    fecha_match = re.search(r"\b\d{2}/\d{2}/\d{4}\b", texto)
+    if fecha_match:
+        resultado["fecha"] = fecha_match.group(0)
+
+    monto_match = re.search(r"\b\d{1,3}(?:[\.,]\d{3})*(?:[\.,]\d{2})\b", texto)
+    if monto_match:
+        resultado["monto"] = monto_match.group(0)
+
+    if tipo == "Declaraciones_Juradas":
+        form_match = re.search(r"\bform(?:ulario)?\s*(\d{2,4})\b", texto, re.IGNORECASE)
+        if form_match:
+            resultado["formulario"] = form_match.group(1)
+
+    return resultado
+
+
+def guardar_resultado_json(nombre_base: str, payload: dict) -> str:
+    nombre = f"{Path(nombre_base).stem}.json"
+    ruta = RESULTADOS_DIR / nombre
+    ruta.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return str(ruta)
 
 
 def guardar_documento(img: Image.Image, tipo: str, nombre_original: str) -> str:
@@ -302,7 +365,11 @@ def predict_image(img: Image.Image, nombre: str) -> dict:
     accion_info = ACCIONES_POR_TIPO.get(tipo, {})
     ruta = guardar_documento(img, tipo, nombre)
 
-    return {
+    ocr = ocr_space_image(img_para_qr)
+    if "texto" in ocr:
+        ocr["campos"] = extraer_campos_ocr(ocr["texto"], tipo)
+
+    resultado = {
         "etapa": "Completado",
         "calidad": "Aprobada",
         "confianza_calidad": round(prob_calidad, 4),
@@ -312,9 +379,14 @@ def predict_image(img: Image.Image, nombre: str) -> dict:
         "tipo_documento": tipo,
         "confianza_documento": round(float(pred_struct[idx_struct]), 4),
         "qr": qr_data,
+        "ocr": ocr,
         "archivo_guardado": ruta,
         "utilidad": accion_info,
     }
+
+    resultado["resultado_guardado"] = guardar_resultado_json(nombre, resultado)
+
+    return resultado
 
 
 async def predict_upload(file: UploadFile) -> dict:
@@ -366,6 +438,119 @@ def procesar_temporales():
             resultados.append({"archivo_temporal": str(path), "error": str(exc)})
 
     return {"cantidad": len(resultados), "resultados": resultados}
+
+
+@app.get("/resultados/export/excel")
+def exportar_resultados_excel(limpiar: bool = False):
+    archivos = [p for p in RESULTADOS_DIR.iterdir() if p.is_file() and p.suffix.lower() == ".json"]
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Resultados"
+    ws.append([
+        "archivo",
+        "tipo_documento",
+        "confianza_documento",
+        "nit",
+        "fecha",
+        "monto",
+        "formulario",
+        "qr_contenido",
+    ])
+
+    for path in archivos:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        ocr_campos = (data.get("ocr") or {}).get("campos", {})
+        qr_data = data.get("qr") or {}
+        ws.append([
+            Path(data.get("archivo_guardado", "")).name,
+            data.get("tipo_documento"),
+            data.get("confianza_documento"),
+            ocr_campos.get("nit"),
+            ocr_campos.get("fecha"),
+            ocr_campos.get("monto"),
+            ocr_campos.get("formulario"),
+            qr_data.get("contenido_raw"),
+        ])
+
+    stream = io.BytesIO()
+    wb.save(stream)
+    stream.seek(0)
+
+    if limpiar:
+        for path in archivos:
+            path.unlink(missing_ok=True)
+
+    return StreamingResponse(
+        stream,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename=resultados_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"},
+    )
+
+
+@app.get("/resultados/export/pdf")
+def exportar_resultados_pdf(limpiar: bool = False):
+    archivos = [p for p in RESULTADOS_DIR.iterdir() if p.is_file() and p.suffix.lower() == ".json"]
+    stream = io.BytesIO()
+    c = canvas.Canvas(stream, pagesize=letter)
+    width, height = letter
+    y = height - 50
+
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(40, y, "Reporte de resultados")
+    y -= 24
+
+    c.setFont("Helvetica", 9)
+    headers = [
+        "archivo",
+        "tipo",
+        "conf.",
+        "nit",
+        "fecha",
+        "monto",
+        "form",
+        "qr",
+    ]
+    c.drawString(40, y, " | ".join(headers))
+    y -= 14
+
+    for path in archivos:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        ocr_campos = (data.get("ocr") or {}).get("campos", {})
+        qr_data = data.get("qr") or {}
+        fila = [
+            Path(data.get("archivo_guardado", "")).name,
+            str(data.get("tipo_documento") or ""),
+            str(data.get("confianza_documento") or ""),
+            str(ocr_campos.get("nit") or ""),
+            str(ocr_campos.get("fecha") or ""),
+            str(ocr_campos.get("monto") or ""),
+            str(ocr_campos.get("formulario") or ""),
+            str(qr_data.get("contenido_raw") or ""),
+        ]
+
+        if y < 60:
+            c.showPage()
+            y = height - 50
+            c.setFont("Helvetica", 9)
+            c.drawString(40, y, " | ".join(headers))
+            y -= 14
+
+        c.drawString(40, y, " | ".join(fila))
+        y -= 12
+
+    c.showPage()
+    c.save()
+    stream.seek(0)
+
+    if limpiar:
+        for path in archivos:
+            path.unlink(missing_ok=True)
+
+    return StreamingResponse(
+        stream,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=resultados_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"},
+    )
 
 
 @app.post("/predict/export/excel")

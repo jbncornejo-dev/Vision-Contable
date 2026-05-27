@@ -26,3 +26,5 @@ Thumbs.db
 .venv/
 __pycache__/
 Documentos_Clasificados/
+Documentos_Temporales/
+Documentos_Resultados/
