@@ -1,17 +1,85 @@
 import io
+import json
+import os
 import shutil
+import urllib.parse
 from datetime import datetime
 from pathlib import Path
+
+import numpy as np
+from PIL import Image
+
+os.environ["KERAS_BACKEND"] = "tensorflow"
+
+import keras
+import cv2
+import openpyxl
+
+try:
+    from pyzbar import pyzbar
+    _PYZBAR_OK = True
+except Exception:
+    pyzbar = None
+    _PYZBAR_OK = False
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from config import ARCHIVOS_DIR
-from services.exporter import construir_excel
-from services.model_loader import load_models
-from services.predictor import predict_upload
-from services.storage import init_storage
+MODELOS_DIR = os.getenv("MODELOS_DIR", "./Modelos_Exportados")
+ARCHIVOS_DIR = Path(os.getenv("ARCHIVOS_DIR", "./Documentos_Clasificados"))
+
+IMG_SIZE = (224, 224)
+
+ACCIONES_POR_TIPO = {
+    "Facturas": {
+        "accion": "Registrar en libro de compras/ventas",
+        "campos_requeridos": [
+            "NIT emisor",
+            "fecha de emisión",
+            "monto total",
+            "número de factura",
+            "descripción del bien o servicio",
+        ],
+        "siguiente_paso": "Enviar a módulo OCR para extracción y contabilización automática",
+        "area_responsable": "Contabilidad / Cuentas por pagar",
+    },
+    "Declaraciones_Juradas": {
+        "accion": "Archivar en expediente tributario del contribuyente",
+        "campos_requeridos": [
+            "NIT contribuyente",
+            "período fiscal declarado",
+            "impuesto determinado",
+            "impuesto a compensar o pagar",
+        ],
+        "siguiente_paso": "Validar montos declarados contra registros internos del SIN",
+        "area_responsable": "Departamento Tributario / Cumplimiento fiscal",
+    },
+    "NITs": {
+        "accion": "Registrar o actualizar datos del contribuyente en el sistema",
+        "campos_requeridos": [
+            "número de NIT",
+            "razón social o nombre",
+            "actividad económica",
+            "domicilio fiscal",
+        ],
+        "siguiente_paso": "Vincular NIT a perfil de proveedor, cliente o empleado según corresponda",
+        "area_responsable": "Administración / Gestión de terceros",
+    },
+}
+
+MENSAJES_ORIENTACION = {
+    "0_grados": "El documento está en orientación correcta. No requiere corrección.",
+    "90_grados": "El documento esta rotado 90° en sentido horario. Se recomienda corregir antes de procesar.",
+    "180_grados": "El documento esta invertido (180°). Se recomienda corregir antes de procesar.",
+    "270_grados": "El documento esta rotado 270° en sentido horario. Se recomienda corregir antes de procesar.",
+}
+
+CARPETA_POR_TIPO = {
+    "Facturas": "Facturas",
+    "NITs": "NITs",
+    "Declaraciones_Juradas": "Declaraciones_Juradas",
+}
 
 app = FastAPI(title="Vision Contable API")
 
@@ -22,12 +90,214 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-init_storage()
+modelo_calidad = None
+modelo_orientacion = None
+modelo_estructural = None
+clases_orientacion = {}
+clases_estructural = {}
+
+
+def init_storage():
+    carpetas = set(CARPETA_POR_TIPO.values()) | {"No_Reconocidos"}
+    for carpeta in carpetas:
+        (ARCHIVOS_DIR / carpeta).mkdir(parents=True, exist_ok=True)
 
 
 @app.on_event("startup")
-def on_startup():
-    load_models()
+def load_models():
+    global modelo_calidad, modelo_orientacion, modelo_estructural
+    global clases_orientacion, clases_estructural
+
+    init_storage()
+
+    modelo_calidad = keras.saving.load_model(f"{MODELOS_DIR}/modelo_calidad.keras")
+    modelo_orientacion = keras.saving.load_model(f"{MODELOS_DIR}/modelo_orientacion.keras")
+    modelo_estructural = keras.saving.load_model(f"{MODELOS_DIR}/modelo_estructural.keras")
+
+    with open(f"{MODELOS_DIR}/clases_orientacion.json") as f:
+        clases_orientacion.update({v: k for k, v in json.load(f).items()})
+
+    with open(f"{MODELOS_DIR}/clases_estructural.json") as f:
+        clases_estructural.update({v: k for k, v in json.load(f).items()})
+
+
+def preprocess(img: Image.Image) -> np.ndarray:
+    img = img.convert("RGB").resize(IMG_SIZE)
+    return np.expand_dims(np.array(img, dtype=np.float32), axis=0)
+
+
+def leer_qr(img: Image.Image) -> dict | None:
+    if not _PYZBAR_OK:
+        return None
+
+    img_cv = cv2.cvtColor(np.array(img.convert("RGB")), cv2.COLOR_RGB2BGR)
+    codigos = pyzbar.decode(img_cv)
+    if not codigos:
+        return None
+
+    contenido = codigos[0].data.decode("utf-8")
+    resultado = {"contenido_raw": contenido}
+
+    if "impuestos.gob.bo" in contenido:
+        try:
+            params = dict(urllib.parse.parse_qsl(urllib.parse.urlparse(contenido).query))
+            resultado["fuente"] = "SIN Bolivia"
+            resultado["datos_factura"] = {
+                "nit_emisor": params.get("nit"),
+                "numero_factura": params.get("nroFactura"),
+                "fecha_emision": params.get("fechaEmision"),
+                "monto_total": params.get("importe"),
+                "codigo_control": params.get("codigoControl"),
+            }
+        except Exception:
+            pass
+
+    return resultado
+
+
+def guardar_documento(img: Image.Image, tipo: str, nombre_original: str) -> str:
+    carpeta = CARPETA_POR_TIPO.get(tipo, "No_Reconocidos")
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    ext = Path(nombre_original).suffix or ".jpg"
+    nombre = f"{ts}_{Path(nombre_original).stem}{ext}"
+    destino = ARCHIVOS_DIR / carpeta / nombre
+    img.save(str(destino))
+    return str(destino)
+
+
+def construir_excel(resultado: dict) -> io.BytesIO:
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Resultado"
+
+    ws.column_dimensions["A"].width = 28
+    ws.column_dimensions["B"].width = 45
+
+    ws.append(["Campo", "Valor"])
+    ws.append(["Fecha procesamiento", datetime.now().strftime("%Y-%m-%d %H:%M:%S")])
+    ws.append(["Calidad", resultado.get("calidad")])
+    ws.append(["Confianza calidad", resultado.get("confianza_calidad")])
+    ws.append(["Orientación detectada", resultado.get("orientacion")])
+    ws.append(["Aviso orientación", resultado.get("aviso_orientacion")])
+    ws.append(["Tipo de documento", resultado.get("tipo_documento")])
+    ws.append(["Confianza documento", resultado.get("confianza_documento")])
+
+    utilidad = resultado.get("utilidad", {})
+    ws.append(["Acción recomendada", utilidad.get("accion")])
+    ws.append(["Siguiente paso", utilidad.get("siguiente_paso")])
+    ws.append(["Área responsable", utilidad.get("area_responsable")])
+
+    campos = utilidad.get("campos_requeridos", [])
+    if campos:
+        ws.append(["Campos requeridos", ", ".join(campos)])
+
+    qr = resultado.get("qr")
+    if qr and "datos_factura" in qr:
+        ws.append([])
+        ws.append(["--- Datos extraídos del QR ---", ""])
+        for k, v in qr["datos_factura"].items():
+            ws.append([k, v or "No disponible"])
+
+    archivo_guardado = resultado.get("archivo_guardado")
+    if archivo_guardado:
+        ws.append([])
+        ws.append(["Archivo guardado en", archivo_guardado])
+
+    stream = io.BytesIO()
+    wb.save(stream)
+    stream.seek(0)
+    return stream
+
+
+def calcular_rotacion(clase_orientacion: str) -> int:
+    digits = "".join(ch for ch in clase_orientacion if ch.isdigit())
+    if not digits:
+        return 0
+    return int(digits)
+
+
+async def predict_upload(file: UploadFile) -> dict:
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="El archivo debe ser una imagen.")
+
+    raw = await file.read()
+    img = Image.open(io.BytesIO(raw))
+    x = preprocess(img)
+    nombre = file.filename or "documento.jpg"
+
+    prob_calidad = float(modelo_calidad.predict(x, verbose=0)[0][0])
+    es_nitida = prob_calidad >= 0.5
+
+    if not es_nitida:
+        return {
+            "etapa": "Calidad",
+            "calidad": "Rechazada",
+            "confianza_calidad": round(1 - prob_calidad, 4),
+            "mensaje": "Imagen con calidad insuficiente. Por favor envíe una imagen más nítida.",
+            "utilidad": {
+                "accion": "Recapturar el documento",
+                "recomendaciones": [
+                    "Asegúrese de que el documento esté bien iluminado",
+                    "Evite sombras o reflejos sobre el papel",
+                    "Mantenga la cámara estable al momento de la captura",
+                    "Limpie el lente de la cámara antes de fotografiar",
+                ],
+            },
+        }
+
+    pred_orient = modelo_orientacion.predict(x, verbose=0)[0]
+    idx_orient = int(np.argmax(pred_orient))
+    orientacion = clases_orientacion.get(idx_orient, "Desconocida")
+
+    angulo_rotacion = calcular_rotacion(orientacion)
+    if angulo_rotacion != 0:
+        img_enderezada = img.rotate(-angulo_rotacion, expand=True)
+        x_estructural = preprocess(img_enderezada)
+        img_para_qr = img_enderezada
+    else:
+        x_estructural = x
+        img_para_qr = img
+
+    pred_struct = modelo_estructural.predict(x_estructural, verbose=0)[0]
+    idx_struct = int(np.argmax(pred_struct))
+    tipo = clases_estructural.get(idx_struct, "Desconocido")
+
+    if tipo == "Ninguno":
+        ruta = guardar_documento(img, "Ninguno", nombre)
+        return {
+            "etapa": "Clasificación estructural",
+            "calidad": "Aprobada",
+            "confianza_calidad": round(prob_calidad, 4),
+            "orientacion": orientacion,
+            "confianza_orientacion": round(float(pred_orient[idx_orient]), 4),
+            "aviso_orientacion": MENSAJES_ORIENTACION.get(orientacion, ""),
+            "tipo_documento": "No reconocido",
+            "confianza_documento": round(float(pred_struct[idx_struct]), 4),
+            "mensaje": "El documento no corresponde a ninguna categoría registrada.",
+            "archivo_guardado": ruta,
+            "utilidad": {
+                "accion": "Derivar a revisión manual",
+                "siguiente_paso": "Enviar al operador para clasificación y archivo manual",
+            },
+        }
+
+    qr_data = leer_qr(img_para_qr) if tipo == "Facturas" else None
+    accion_info = ACCIONES_POR_TIPO.get(tipo, {})
+    ruta = guardar_documento(img, tipo, nombre)
+
+    return {
+        "etapa": "Completado",
+        "calidad": "Aprobada",
+        "confianza_calidad": round(prob_calidad, 4),
+        "orientacion": orientacion,
+        "confianza_orientacion": round(float(pred_orient[idx_orient]), 4),
+        "aviso_orientacion": MENSAJES_ORIENTACION.get(orientacion, ""),
+        "tipo_documento": tipo,
+        "confianza_documento": round(float(pred_struct[idx_struct]), 4),
+        "qr": qr_data,
+        "archivo_guardado": ruta,
+        "utilidad": accion_info,
+    }
 
 
 @app.post("/predict")
@@ -44,11 +314,11 @@ async def predict_and_export_excel(file: UploadFile = File(...)):
         headers=file.headers,
     )
     resultado = await predict_upload(fake_file)
-    stream    = construir_excel(resultado)
+    stream = construir_excel(resultado)
     return StreamingResponse(
         stream,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename=resultado_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"}
+        headers={"Content-Disposition": f"attachment; filename=resultado_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"},
     )
 
 
@@ -75,7 +345,7 @@ def descargar_carpeta(tipo: str):
     return FileResponse(
         archivo_zip,
         media_type="application/zip",
-        filename=f"{tipo}.zip"
+        filename=f"{tipo}.zip",
     )
 
 
