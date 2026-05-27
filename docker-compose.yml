@@ -1,0 +1,31 @@
+version: '3.8'
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: vision-contable-backend:latest
+    container_name: vision_backend
+    env_file:
+      - backend/.env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/Modelos_Exportados:/app/Modelos_Exportados:ro
+      - ./backend/Documentos_Clasificados:/app/Documentos_Clasificados
+      - ./backend/Documentos_Resultados:/app/Documentos_Resultados
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    image: vision-contable-frontend:latest
+    container_name: vision_frontend
+    env_file:
+      - frontend/.env.local
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped

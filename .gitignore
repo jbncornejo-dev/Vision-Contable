@@ -16,6 +16,8 @@ backend/.pytest_cache/
 /dataset/
 /imagenes/
 /backend/Modelos_Exportados/
+/backend/Documentos_Clasificados/
+/backend/Documentos_Resultados/
 
 # =========================
 # 3. Sistema Operativo y Varios
@@ -23,5 +25,8 @@ backend/.pytest_cache/
 .DS_Store
 Thumbs.db
 .env
+backend/.env
+!.env.example
+!env.example
 .venv/
 __pycache__/
