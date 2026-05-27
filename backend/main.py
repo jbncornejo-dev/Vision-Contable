@@ -6,6 +6,7 @@ import urllib.parse
 import re
 from datetime import datetime
 from pathlib import Path
+import uuid
 
 import numpy as np
 from PIL import Image
@@ -23,6 +24,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 MODELOS_DIR = os.getenv("MODELOS_DIR", "./Modelos_Exportados")
 ARCHIVOS_DIR = Path(os.getenv("ARCHIVOS_DIR", "./Documentos_Clasificados"))
+TEMP_DIR = Path(os.getenv("TEMP_DIR", "./Documentos_Temporales"))
 
 IMG_SIZE = (224, 224)
 
@@ -96,6 +98,7 @@ def init_storage():
     carpetas = set(CARPETA_POR_TIPO.values()) | {"No_Reconocidos"}
     for carpeta in carpetas:
         (ARCHIVOS_DIR / carpeta).mkdir(parents=True, exist_ok=True)
+    TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @app.on_event("startup")
@@ -236,14 +239,8 @@ def calcular_rotacion(clase_orientacion: str) -> int:
     return int(digits)
 
 
-async def predict_upload(file: UploadFile) -> dict:
-    if not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="El archivo debe ser una imagen.")
-
-    raw = await file.read()
-    img = Image.open(io.BytesIO(raw))
+def predict_image(img: Image.Image, nombre: str) -> dict:
     x = preprocess(img)
-    nombre = file.filename or "documento.jpg"
 
     prob_calidad = float(modelo_calidad.predict(x, verbose=0)[0][0])
     es_nitida = prob_calidad >= 0.5
@@ -320,9 +317,55 @@ async def predict_upload(file: UploadFile) -> dict:
     }
 
 
+async def predict_upload(file: UploadFile) -> dict:
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="El archivo debe ser una imagen.")
+
+    raw = await file.read()
+    img = Image.open(io.BytesIO(raw))
+    nombre = file.filename or "documento.jpg"
+    return predict_image(img, nombre)
+
+
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
     return await predict_upload(file)
+
+
+@app.post("/uploads")
+async def upload_temporales(files: list[UploadFile] = File(...)):
+    resultados = []
+    for archivo in files:
+        contenido = await archivo.read()
+        ext = Path(archivo.filename or "archivo").suffix or ".bin"
+        nombre = f"{uuid.uuid4().hex}{ext}"
+        destino = TEMP_DIR / nombre
+        destino.write_bytes(contenido)
+        resultados.append({
+            "nombre_original": archivo.filename,
+            "archivo_temporal": str(destino),
+        })
+
+    return {"cantidad": len(resultados), "archivos": resultados}
+
+
+@app.post("/uploads/procesar")
+def procesar_temporales():
+    archivos = [p for p in TEMP_DIR.iterdir() if p.is_file()]
+    if not archivos:
+        return {"cantidad": 0, "resultados": []}
+
+    resultados = []
+    for path in archivos:
+        try:
+            img = Image.open(path)
+            resultado = predict_image(img, path.name)
+            resultados.append({"archivo_temporal": str(path), "resultado": resultado})
+            path.unlink(missing_ok=True)
+        except Exception as exc:
+            resultados.append({"archivo_temporal": str(path), "error": str(exc)})
+
+    return {"cantidad": len(resultados), "resultados": resultados}
 
 
 @app.post("/predict/export/excel")
