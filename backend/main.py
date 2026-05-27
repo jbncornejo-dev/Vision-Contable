@@ -73,22 +73,37 @@ async def predict(file: UploadFile = File(...)):
             "mensaje":           "Imagen con calidad insuficiente. Por favor envíe una imagen más nítida.",
         }
 
+    # 2. EVALUACIÓN DE ORIENTACIÓN (Modelo 2)
     pred_orient  = modelo_orientacion.predict(x, verbose=0)[0]
     idx_orient   = int(np.argmax(pred_orient))
+    clase_orientacion_str = clases_orientacion[idx_orient]
 
-    pred_struct  = modelo_estructural.predict(x, verbose=0)[0]
+    # Lógica de rotación basada en la clase de orientación predicha
+    angulo_rotacion = 0
+    try:
+        # Extraemos el número entero de la predicción
+        angulo_rotacion = int(''.join(filter(str.isdigit, clase_orientacion_str)))
+    except ValueError:
+        pass # Si no hay números, se mantiene en 0
+
+    if angulo_rotacion != 0: # Si la imagen no está en la orientación correcta, la rotamos
+        img_enderezada = img.rotate(-angulo_rotacion, expand=True)
+        
+        # Volvemos a aplicar la función preprocess a la nueva imagen enderezada
+        x_estructural = preprocess(img_enderezada)
+    else:
+        x_estructural = x
+
+    # 3. CLASIFICACIÓN ESTRUCTURAL (Modelo 3)
+    # Ahora le pasamos el tensor de la imagen ya enderezada (x_estructural)
+    pred_struct  = modelo_estructural.predict(x_estructural, verbose=0)[0]
     idx_struct   = int(np.argmax(pred_struct))
 
     return {
         "calidad":           "Aprobada",
         "confianza_calidad": round(prob_calidad, 4),
-        "orientacion":       clases_orientacion[idx_orient],
+        "orientacion":       clase_orientacion_str,
         "confianza_orient":  round(float(pred_orient[idx_orient]), 4),
         "tipo_documento":    clases_estructural[idx_struct],
         "confianza_tipo":    round(float(pred_struct[idx_struct]), 4),
     }
-
-
-@app.get("/health")
-def health():
-    return {"status": "ok"}
