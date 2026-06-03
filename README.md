@@ -1,23 +1,52 @@
 # Vision Contable - Clasificación Inteligente de Documentos
 
-Plataforma web con frontend Next.js y backend FastAPI para la clasificación, rotación y validación de documentos contables.
+Plataforma web con frontend Next.js y backend FastAPI para la clasificación, rotación y validación de documentos contables
 
-## Requisitos mínimos
+## Prerequisitos
 
-* Python 3.12
-* Node.js 18+
+* Docker Desktop con docker compose funcional
 * Git
 
-## Instalación y ejecución rápida
+## Como Ejecutar
 
-Abre una terminal y ejecuta estos comandos:
+1. Clona el repositorio y entra a la carpeta:
 
 ```bash
 git clone https://github.com/jbncornejo-dev/Vision-Contable.git
 cd Vision-Contable
 ```
 
-### 1. Backend
+2. Copia las variables de entorno:
+
+```bash
+copy backend\.env.example backend\.env
+copy frontend\.env.local.example frontend\.env
+```
+
+3. Levanta todo con Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+4. Abre:
+
+```bash
+http://localhost:3000
+```
+
+Backend (API): `http://localhost:8000`.
+
+## Tecnologías del proyecto
+
+* Python 3.12
+* Node.js 18+
+* Git
+* Docker
+
+## Ejecucion manual (opcional sin docker)
+
+### Backend
 
 ```bash
 cd backend
@@ -29,7 +58,7 @@ copy .env.example .env
 python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Si el comando `uvicorn` no se encuentra, usa esta variante directa:
+Si el comando `uvicorn` no se encuentra:
 
 ```bash
 cd backend
@@ -47,7 +76,7 @@ cd backend
 > uvicorn main:app --reload --host 0.0.0.0 --port 8000
 > ```
 
-### 2. Frontend
+### Frontend
 
 Antes de instalar, copia el archivo de configuración:
 
@@ -75,27 +104,14 @@ npm install
 npm run dev
 ```
 
-Luego abre el navegador en:
+Debe abrir el navegador en:
 
 ```bash
 http://localhost:3000
 ```
 
-## Notas importantes
-
-* Copia `backend/.env.example` a `backend/.env`.
-* Copia `frontend/.env.local.example` a `frontend/.env`.
-* Si necesitas editar variables de entorno, modifica `backend/.env` o `frontend/.env`.
-* El backend usa `reportlab==4.5.1`, compatible con Python 3.12.
-* No es necesario ejecutar ningún paso adicional fuera de los comandos mostrados arriba.
-
-## Estructura principal
-
-* `/frontend` - Aplicación web Next.js.
-* `/backend` - API FastAPI y dependencias Python.
-
-## Enlaces útiles
-
+## Enlaces
+* Carpeta de archivos y organización: https://drive.google.com/drive/folders/1sdp1bp2hRd-aGpk7vOGql042lgbh8okN
 * Colab del proyecto: https://colab.research.google.com/drive/1LQ6VaRtbjCX_2h3w-9YFENiVGkCzb4Un
 * Repositorio original: https://github.com/jbncornejo-dev/Vision-Contable.git
 

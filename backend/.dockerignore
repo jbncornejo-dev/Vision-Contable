@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.pyo
+*.pyd
+.env
+env/
+Documentos_Clasificados/
+Documentos_Resultados/
+Documentos_Temporales/
+.git/
+.gitignore

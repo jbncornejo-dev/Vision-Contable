@@ -1,0 +1,27 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      MODELOS_DIR: /app/Modelos_Exportados
+      ARCHIVOS_DIR: /app/Documentos_Clasificados
+      RESULTADOS_DIR: /app/Documentos_Resultados
+    volumes:
+      - ./backend/Documentos_Clasificados:/app/Documentos_Clasificados
+      - ./backend/Documentos_Resultados:/app/Documentos_Resultados
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_BACKEND_URL: http://localhost:8000
+    env_file:
+      - ./frontend/.env
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend

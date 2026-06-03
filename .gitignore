@@ -1,6 +1,8 @@
 # =========================
 # 1. Backend (Python/FastAPI)
 # =========================
+backend/.venv/
+.venv/
 backend/env/
 backend/__pycache__/
 backend/.pytest_cache/
@@ -14,9 +16,22 @@ backend/.pytest_cache/
 *.pb
 /dataset/
 /imagenes/
-/backend/Modelos_Exportados/
 /backend/Documentos_Clasificados/
 /backend/Documentos_Resultados/
+/Documentos_Resultados/
+/Documentos_Temporales/
+
+# =========================
+# 2. Frontend (Next.js)
+# =========================
+frontend/node_modules/
+frontend/.next/
+frontend/.env
+frontend/.env.local
+frontend/.env.*
+npm-debug.log
+yarn-debug.log
+yarn-error.log
 
 # =========================
 # 3. Sistema Operativo y Varios

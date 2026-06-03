@@ -23,10 +23,19 @@ export async function POST(request: Request): Promise<NextResponse> {
         return NextResponse.json({ error: 'No se envió ningún archivo' }, { status: 400 });
     }
 
+    const token = process.env.BLOB_READ_WRITE_TOKEN;
+    if (!token) {
+        return NextResponse.json(
+            { error: 'Falta BLOB_READ_WRITE_TOKEN en el entorno del frontend' },
+            { status: 500 }
+        );
+    }
+
     try {
         const safeFilename = normalizeFilename(filename);
         const blob = await put(`${Date.now()}_${safeFilename}`, request.body, {
             access: 'public',
+            token,
         });
 
         return NextResponse.json({

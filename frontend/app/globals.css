@@ -2,7 +2,8 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #021024;
+  color-scheme: light;
 }
 
 @theme inline {
@@ -21,16 +22,9 @@
   --radius-full: 0px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: #ffffff;
+  color: #021024;
   font-family: var(--font-dm-sans), sans-serif;
 }
 
